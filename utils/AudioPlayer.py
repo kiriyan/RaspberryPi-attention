@@ -4,6 +4,8 @@
 音频播放器组件
 因使用了多线程，只能在main函数中使用
 """
+import os
+
 from pydub import AudioSegment
 from pydub.playback import play
 from multiprocessing import Process
@@ -28,7 +30,7 @@ def playAudio(file_name, start_time=0):
     :param start_time: 播放开始时间(毫秒)
     :return:
     """
-    full_clip = AudioSegment.from_file("D:/Design/RaspberryPi-attention/static/audio/" + file_name)
+    full_clip = AudioSegment.from_file(os.getcwd() + "/static/audio/" + file_name)
     AudioPlayer.audio_process = Process(target=play, args=(full_clip[start_time:],))
     try:
         AudioPlayer.audio_process.start()
@@ -44,7 +46,7 @@ def playAudioWithoutProcess(file_name, start_time=0):
     :param start_time: 播放开始时间(毫秒)
     :return:
     """
-    full_clip = AudioSegment.from_file("D:/Design/RaspberryPi-attention/static/audio/" + file_name)
+    full_clip = AudioSegment.from_file(os.getcwd() + "/static/audio/" + file_name)
     try:
         play(full_clip[start_time:])
     except Exception as e:
