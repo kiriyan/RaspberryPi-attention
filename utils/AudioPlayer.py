@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 音频播放器组件
+因使用了多线程，只能在main函数中使用
 """
-
-
 from pydub import AudioSegment
 from pydub.playback import play
 from multiprocessing import Process
 
 
-def terminate():
+def terminatePlaying():
     """
     终止播放函数
     :return: 终止是否成功
@@ -24,17 +23,36 @@ def terminate():
 
 def playAudio(file_name, start_time=0):
     """
-    播放函数(仅支持wav格式)
+    播放函数
     :param file_name: static/audio中文件名
     :param start_time: 播放开始时间(毫秒)
     :return:
     """
-    full_clip = AudioSegment.from_wav("../static/audio/" + file_name)
-    AudioPlayer.audio_process = Process(play, full_clip[start_time:])
-    AudioPlayer.audio_process.start()
+    full_clip = AudioSegment.from_file("D:/Design/RaspberryPi-attention/static/audio/" + file_name)
+    AudioPlayer.audio_process = Process(target=play, args=(full_clip[start_time:],))
+    try:
+        AudioPlayer.audio_process.start()
+    except Exception as e:
+        return False
+    return True
+
+
+def playAudioWithoutProcess(file_name, start_time=0):
+    """
+    不使用多线程的播放函数 无法终止播放
+    :param file_name: static/audio中文件名
+    :param start_time: 播放开始时间(毫秒)
+    :return:
+    """
+    full_clip = AudioSegment.from_file("D:/Design/RaspberryPi-attention/static/audio/" + file_name)
+    try:
+        play(full_clip[start_time:])
+    except Exception as e:
+        return False
+    return True
 
 
 class AudioPlayer:
 
-    audio_process = Process()
+    audio_process = None
 
