@@ -1,5 +1,4 @@
 """
-CarState = 0
 /BlueTooth
     --变量
     --方法
@@ -9,6 +8,7 @@ CarState = 0
 /Screen
 /AudioPlayer
 /main
+    CarState = 0
     --set up:
         -0: 读取：训练文件 -> 赋值：用户小车等级、训练index、上传index、WIFI名称(如果有)、WIFI密码(如果有)、用户ID(如果有)
         -1: (有以上WIFI相关的三个文件则)：WIFI联网初始化
@@ -62,3 +62,8 @@ CarState = 0
                         -专注力上升超过阈值(之前低于阈值) -> 播放音效文件
                         -读取：目前训练时间 和 当前地图  -> 决定：播放训练阶段性音效
 """
+import utils.Bluetooth as bl
+import utils.AudioPlayer as ap
+
+global Car_State
+Car_State = 0
