@@ -3,19 +3,39 @@
 """
 蓝牙组件
 """
-from gi.repository import GLib
+import time
+
 from bluezero import adapter, peripheral, device
 
+class BlueService:
 
-class UARTDevice:
-    def __init__(self, adapter_address):
-        UART_SERVICE = 'b0fbf5b2-91eb-4b82-be41-5fb04ddffcb9'
-        RX_CHARACTERISTIC = 'b0fbf5b2-91eb-4b82-be41-5fb04ddffcb8'
-        TX_CHARACTERISTIC = 'b0fbf5b2-91eb-4b82-be41-5fb04ddffcb7'
+    connected_method = None
+
+    disconnected_method = None
+
+    receive_method = None
+
+    def __init__(self, adapter_address, receive_method, connected_method, disconnected_method, ):
+        """
+        构造方法
+        构造时传入
+        可在下列method中通过self.send()的方式发送数据给手机
+        :param adapter_address:
+        :param receive_method: 接收到数据时执行 参数有self value; value为接收到的参数
+        :param connected_method: 成功连接时执行 参数有self
+        :param disconnected_method: 断开连接时执行 参数有self
+        """
+        UART_SERVICE = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E'
+        RX_CHARACTERISTIC = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E'
+        TX_CHARACTERISTIC = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E'
+
+        self.receive_method = receive_method
+        self.connected_method = connected_method
+        self.disconnected_method = disconnected_method
 
         ble_uart = peripheral.Peripheral(
             adapter_address,
-            local_name='AttentionGo_RaspberryPi'
+            local_name='Nero_Car_Service'
         )
 
         ble_uart.add_service(srv_id=1, uuid=UART_SERVICE, primary=True)
@@ -49,54 +69,56 @@ class UARTDevice:
 
     def on_connect(self, ble_device: device.Device):
         print("Connected to " + str(ble_device.address))
+        self.connected_method(self)
 
     def on_disconnect(self, adapter_address, device_address):
         print("Disconnected from " + device_address)
+        self.disconnected_method(self)
 
     def uart_notify(self, notifying, characteristic):
+        print("notify_callback")
         if notifying:
             self.tx_obj = characteristic
         else:
             self.tx_obj = None
 
-    def update_tx(self, value):
-        if self.tx_obj:
-            print("Sending")
-            self.tx_obj.set_value(value)
+    def send(self, value):
+        """
+        蓝牙发送方法
+        :param value: str类型的数据
+        :return:
+        """
+        print(self.ble_uart)
+        self.ble_uart.characteristics[1].set_value(bytearray(value.encode("UTF-8")))
 
     def uart_write(self, value, options):
         print('raw bytes:', value)
+        self.receive_method(self, value)
         print('With options:', options)
         print('Text value:', bytes(value).decode('utf-8'))
-        self.update_tx(value)
 
 
-if __name__ == '__main__':
-    adapter_address = list(adapter.Adapter.available())[0].address
-    ud = UARTDevice(adapter_address)
-    ud.publish()
-
-
-def getState():
-    """
-    获取蓝牙状态函数
-    :return: 蓝牙是否连接
-    """
-    return False
-
-
-def read():
-    """
-    读取特征值函数
-    :return: 当前的特征值
-    """
-    return ""
-
-
-def send(str):
-    """
-    发送字符串函数
-    :param str: 待发送字符串
-    :return: 发送是否成功
-    """
-    return True
+"""
+下为使用示例
+"""
+# def connectedTest(self):
+#     print("testConnected")
+#     i = 0
+#     while True:
+#         i += 1
+#         time.sleep(1)
+#         self.send("ddd" + str(i))
+#
+#
+# def disconnectedTest(self):
+#     print("testDisconnected")
+#
+#
+# def receiveTest(self, value):
+#     print(value)
+#
+#
+# if __name__ == '__main__':
+#     adapter_address = list(adapter.Adapter.available())[0].address
+#     ud = BlueService(adapter_address, receiveTest, connectedTest, disconnectedTest)
+#     ud.publish()
