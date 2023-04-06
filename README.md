@@ -1,6 +1,21 @@
 # RaspberryPi-attention
 AttentionGo on RaspberryPi
 
+考虑到Screen是计算密集型而不是IO密集型，则Screen更新的函数需要封装成进程执行，而蓝牙和wifi为IO密集型
+可使用线程
+
+#运行框架
+主进程：Mainloop中除屏幕更新的部分
+    
+    --主线程：小车循迹运动pid()、音效播放
+    --子线程1：接收脑电蓝牙hc05串口数据
+    --子线程2：实时上传至后端
+
+副进程：屏幕更新Screen()
+
+
+#程序架构
+
 /BlueTooth
 
     --变量
