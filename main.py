@@ -67,3 +67,9 @@ import utils.AudioPlayer as ap
 
 global Car_State
 Car_State = 0
+
+def setup():
+    pass
+
+def loop():
+    pass

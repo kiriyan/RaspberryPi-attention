@@ -15,7 +15,7 @@ class BlueService:
 
     receive_method = None
 
-    def __init__(self, adapter_address, receive_method, connected_method, disconnected_method, ):
+    def __init__(self, adapter_address, receive_method=None, connected_method=None, disconnected_method=None, ):
         """
         构造方法
         构造时传入
@@ -29,9 +29,9 @@ class BlueService:
         RX_CHARACTERISTIC = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E'
         TX_CHARACTERISTIC = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E'
 
-        self.receive_method = receive_method
-        self.connected_method = connected_method
-        self.disconnected_method = disconnected_method
+        BlueService.receive_method = receive_method
+        BlueService.connected_method = connected_method
+        BlueService.disconnected_method = disconnected_method
 
         ble_uart = peripheral.Peripheral(
             adapter_address,
@@ -69,11 +69,11 @@ class BlueService:
 
     def on_connect(self, ble_device: device.Device):
         print("Connected to " + str(ble_device.address))
-        self.connected_method(self)
+        BlueService.connected_method(self)
 
     def on_disconnect(self, adapter_address, device_address):
         print("Disconnected from " + device_address)
-        self.disconnected_method(self)
+        BlueService.disconnected_method(self)
 
     def uart_notify(self, notifying, characteristic):
         print("notify_callback")
@@ -93,7 +93,7 @@ class BlueService:
 
     def uart_write(self, value, options):
         print('raw bytes:', value)
-        self.receive_method(self, value)
+        BlueService.receive_method(self, value)
         print('With options:', options)
         print('Text value:', bytes(value).decode('utf-8'))
 
