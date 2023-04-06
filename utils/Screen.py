@@ -142,32 +142,28 @@ class Screen:
         self.draw = None  # 绘制对象
         self.newPage()
 
-    def drawImg(self, path=""):
+    def drawImg(self, path=''):
         """
         在屏幕上全屏显示特定路径的图片
-        :param path (str): 图片的绝对路径
-        :return isShowed (bool): 显示成功与否
+        :param path : str, 图片的绝对路径
+        :return isShowed: bool, 显示成功与否
         """
-        isShowed = False
-
         # 也可以从地址读取图片文件，并缩放为320x240
-        image = Image.open('/home/pi/test.jpg')
+        image = Image.open(path)
         image = image.convert('RGBA')
         image = image.resize((Screen.screenWidth, Screen.screenHeight))  # 也可以从地址读取图片文件，并缩放为160x128
         isShowed = self.drawImg16BitColor(image)
         return isShowed
 
-    def drawText(self, text="", ):
-
-
-
-setFont = ImageFont.truetype("/usr/share/fonts/myfont/MSYHBD.TTF",
-                             32)  # 字体地址，请参考我这篇内容：https://blog.csdn.net/chenqide163/article/details/106933858
-draw.text((35, 0), "离思", font=setFont, fill="#FFA500", direction=None)
-setFont = ImageFont.truetype("/usr/share/fonts/myfont/MSYHBD.TTF", 16)
-draw.text((105, 15), "元稹", font=setFont, fill="#00FFFF", direction=None)
-setFont = ImageFont.truetype("/usr/share/fonts/myfont/MSYHBD.TTF", 20)
-draw.text((0, 35), "曾经沧海难为水，", font=setFont, fill="#FFFF00", direction=None)
-draw.text((0, 60), "除却巫山不是云。", font=setFont, fill="#FFFF00", direction=None)
-draw.text((0, 85), "取次花丛懒回顾，", font=setFont, fill="#FFFF00", direction=None)
-draw.text((0, 110), "半缘修道半缘君。", font=setFont, fill="#FFFF00", direction=None)
+    def drawText(self, text="", font_size=15, position=(0, 0), fill="#000000", direction=None):
+        """
+        在屏幕特定位置写入文字
+        :param text: str，显示的文字
+        :param font_size: int，字号
+        :param position: tuple，位置
+        :param fill: str，16进制颜色码
+        :param direction: 文字方向
+        :return: None
+        """
+        setFont = ImageFont.truetype("/usr/share/fonts/myfont/MSYHBD.TTF", font_size)
+        self.draw.text(position, text, font=setFont, fill=fill, direction=direction)
