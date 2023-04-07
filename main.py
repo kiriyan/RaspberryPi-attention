@@ -62,8 +62,10 @@
                         -专注力上升超过阈值(之前低于阈值) -> 播放音效文件
                         -读取：目前训练时间 和 当前地图  -> 决定：播放训练阶段性音效
 """
-import utils.Bluetooth as bl
-import utils.AudioPlayer as ap
+# import utils.Bluetooth as bl
+from multiprocessing import Process, Queue
+from ProcessPool import *
+import time
 
 global Car_State
 Car_State = 0
@@ -71,5 +73,17 @@ Car_State = 0
 def setup():
     pass
 
-def loop():
-    pass
+
+def Mainloop(AudioTasks=Queue(), ScreenTasks=Queue()):
+    while True:
+        print("3(左).mp3")
+        AudioTasks.put("3(左).mp3")
+        time.sleep(10)
+        print("4(右).mp3")
+        AudioTasks.put("4(右).mp3")
+        time.sleep(10)
+
+
+if __name__ == "__main__":
+    PP = ProcessPool(mainloop=Mainloop)
+    PP.startAll()
