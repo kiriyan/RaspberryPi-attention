@@ -76,12 +76,18 @@ def setup():
 
 def Mainloop(AudioTasks=Queue(), ScreenTasks=Queue()):
     while True:
-        print("3(左).mp3")
-        AudioTasks.put("3(左).mp3")
-        time.sleep(10)
-        print("4(右).mp3")
-        AudioTasks.put("4(右).mp3")
-        time.sleep(10)
+        # print("3(左).mp3")
+        # AudioTasks.put("3(左).mp3")
+        # time.sleep(10)
+        # print("4(右).mp3")
+        # AudioTasks.put("4(右).mp3")
+        # time.sleep(10)
+        if Car_State == 0:
+            # 休眠模式
+            pass
+        elif Car_State == 1:
+            # 训练准备模式
+            pass
 
 
 if __name__ == "__main__":

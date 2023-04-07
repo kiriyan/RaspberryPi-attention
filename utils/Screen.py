@@ -144,14 +144,14 @@ class Screen:
         self.image = None
         self.newPage()
 
-    def drawImg(self, path=''):
+    def drawImg(self, file_name=""):
         """
         在屏幕上全屏显示特定路径的图片
         :param path : str, 图片的绝对路径
         :return isShowed: bool, 显示成功与否
         """
         # 也可以从地址读取图片文件，并缩放为320x240
-        self.image = Image.open(path)
+        self.image = Image.open(os.getcwd() + "/static/images/" + file_name)
         self.image = self.image.convert('RGBA')
         self.image = self.image.resize((Screen.screenWidth, Screen.screenHeight))  # 也可以从地址读取图片文件，并缩放为160x128
         isShowed = self.drawImg16BitColor(self.image)
@@ -173,6 +173,7 @@ class Screen:
         isShowed = self.drawImg16BitColor(self.image)
         return isShowed
 
+
 screen = Screen()
-screen.drawImg(os.getcwd() + "/static/images/" + "3.jpg")
+screen.drawImg("3.jpg")
 screen.drawText("hello")
