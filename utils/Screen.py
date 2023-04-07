@@ -6,6 +6,7 @@ import time  # 用于计算spi刷新整个屏幕所用时长
 import RPi.GPIO as GPIO  # 用于操作引脚
 import spidev  # 树莓派与屏幕的交互协议为SPI，说明见：https://github.com/doceme/py-spidev
 from PIL import Image, ImageFont, ImageDraw  # 用于创建画布，或者读取具体路径下的图片。给图片添加文字。
+import os
 
 class Screen:
     
@@ -124,8 +125,8 @@ class Screen:
             return True
 
     def newPage(self):
-        image = Image.new('RGB', (Screen.screenWidth, Screen.screenHeight))  # 可以使用代码新建画布
-        self.draw = ImageDraw.Draw(image)
+        self.image = Image.new('RGB', (Screen.screenWidth, Screen.screenHeight))  # 可以使用代码新建画布
+        self.draw = ImageDraw.Draw(self.image)
 
     def __init__(self):
         GPIO.setmode(GPIO.BOARD)  # 设置GPIO.BOARD引脚模式
@@ -140,6 +141,7 @@ class Screen:
         # 显示内容相关
         self.PageIndex = 0  # 显示页面号
         self.draw = None  # 绘制对象
+        self.image = None
         self.newPage()
 
     def drawImg(self, path=''):
@@ -149,10 +151,10 @@ class Screen:
         :return isShowed: bool, 显示成功与否
         """
         # 也可以从地址读取图片文件，并缩放为320x240
-        image = Image.open(path)
-        image = image.convert('RGBA')
-        image = image.resize((Screen.screenWidth, Screen.screenHeight))  # 也可以从地址读取图片文件，并缩放为160x128
-        isShowed = self.drawImg16BitColor(image)
+        self.image = Image.open(path)
+        self.image = self.image.convert('RGBA')
+        self.image = self.image.resize((Screen.screenWidth, Screen.screenHeight))  # 也可以从地址读取图片文件，并缩放为160x128
+        isShowed = self.drawImg16BitColor(self.image)
         return isShowed
 
     def drawText(self, text="", font_size=15, position=(0, 0), fill="#000000", direction=None):
@@ -163,7 +165,14 @@ class Screen:
         :param position: tuple，位置
         :param fill: str，16进制颜色码
         :param direction: 文字方向
-        :return: None
+        :return: isShowed
         """
+        self.draw = ImageDraw.Draw(self.image)
         setFont = ImageFont.truetype("/usr/share/fonts/myfont/MSYHBD.TTF", font_size)
         self.draw.text(position, text, font=setFont, fill=fill, direction=direction)
+        isShowed = self.drawImg16BitColor(self.image)
+        return isShowed
+
+screen = Screen()
+screen.drawImg(os.getcwd() + "/static/images/" + "3.jpg")
+screen.drawText("hello")
