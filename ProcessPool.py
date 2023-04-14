@@ -1,5 +1,6 @@
 from multiprocessing import Process, Queue
 import utils.AudioPlayer as ap
+from utils.Screen import *
 
 class ProcessPool:
     AudioTasks = Queue()  # 音频任务表，传入歌曲名str
@@ -8,7 +9,7 @@ class ProcessPool:
     procAudio = None
     procScreen = None
 
-    def __init__(self, mainloop=None, ScreenFunc=None):
+    def __init__(self, mainloop=None):
         """
         把主函数传入，作为主进程;把屏幕刷新函数传入（可选）
         :param mainloop: 必须包含两个传入参数AudioTasks, ScreenTasks
@@ -16,8 +17,10 @@ class ProcessPool:
         """
         ProcessPool.procAudio = Process(target=self.AudioProc, args=(ProcessPool.AudioTasks,))
         ProcessPool.procMain = Process(target=mainloop, args=(ProcessPool.AudioTasks, ProcessPool.ScreenTasks,))
-        if ScreenFunc is not None:
-            ProcessPool.procScreen = Process(target=ScreenFunc, args=(ProcessPool.ScreenTasks,))
+        ProcessPool.procScreen = Process(target=self.AudioProc, args=(ProcessPool.ScreenTasks,))
+        self.Screen = Screen()
+        # if ScreenFunc is not None:
+        #     ProcessPool.procScreen = Process(target=ScreenFunc, args=(ProcessPool.ScreenTasks,))
         self.AudioNowTask = None
 
     def AudioProc(self, tasks=Queue()):
@@ -39,6 +42,16 @@ class ProcessPool:
                         print("audioNowPlay closed")
                 self.AudioNowTask = ap.playMusic(file_name)
                 self.AudioNowTask.start()
+
+    def ScreenProc(self, tasks=Queue()):
+        while True:
+            if not tasks.empty():
+                order = tasks.get()
+                print("order: ", order)
+                if order["name"] == "Jump":
+                    self.Screen.drawImg(order["args"]["page"])
+                elif order["name"] == "set_attention":
+                    self.Screen.set_attention(order["args"]["val"])
 
     def startMain(self):
         """
@@ -62,3 +75,4 @@ class ProcessPool:
         """
         ProcessPool.procMain.start()
         ProcessPool.procAudio.start()
+        ProcessPool.procScreen.start()

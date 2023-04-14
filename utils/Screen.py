@@ -142,6 +142,7 @@ class Screen:
         self.PageIndex = 0  # 显示页面号
         self.draw = None  # 绘制对象
         self.image = None
+        self.PageName = None
         self.newPage()
 
     def drawImg(self, file_name=""):
@@ -151,6 +152,7 @@ class Screen:
         :return isShowed: bool, 显示成功与否
         """
         # 也可以从地址读取图片文件，并缩放为320x240
+        self.PageName = file_name
         self.image = Image.open(os.getcwd() + "/static/images/" + file_name)
         self.image = self.image.convert('RGBA')
         self.image = self.image.resize((Screen.screenWidth, Screen.screenHeight))  # 也可以从地址读取图片文件，并缩放为160x128
@@ -172,6 +174,15 @@ class Screen:
         self.draw.text(position, text, font=setFont, fill=fill, direction=direction)
         isShowed = self.drawImg16BitColor(self.image)
         return isShowed
+
+    def set_attention(self, val=1):
+        if 0 <= val < 25:
+            self.drawImg("Page_level_low.jpg")
+        elif 25 <= val < 50:
+            self.drawImg("Page_level_mid.jpg")
+        elif 50 <= val <= 100:
+            self.drawImg("Page_level_high.jpg")
+        self.drawText(text=str(val), font_size=30, position=(131, 187))
 
 
 screen = Screen()

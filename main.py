@@ -1,80 +1,134 @@
-"""
-/BlueTooth
-    --变量
-    --方法
-        --- get_state()：获取连接状态
-        --- read()：读取数据
-        --- send()：上传数据
-/Screen
-/AudioPlayer
-/main
-    CarState = 0
-    --set up:
-        -0: 读取：训练文件 -> 赋值：用户小车等级、训练index、上传index、WIFI名称(如果有)、WIFI密码(如果有)、用户ID(如果有)
-        -1: (有以上WIFI相关的三个文件则)：WIFI联网初始化
-            开启蓝牙线程(板载蓝牙 或 HC05串口协议)
-                读取蓝牙数据 -> 解析json -> 存储WIFI名称、WIFI密码、用户ID至SD卡并赋值 -> WIFI联网初始化
-    --blue tooth（线程1）
-        0: BlueTooth.read() -> 读取蓝牙数据(如果有) -> 解析json -> 赋值：new-WIFI名称、new-WIFI密码、用户ID
-    --main loop:
-        -0: Sleep mode / upload mode 休眠模式：数据堆积上传
-            --0.0 判断用户是否切换模式
-            --0.1 上传数据：
-                ---> BlueTooth.get_state() == "connected" ? 通过蓝牙上传BlueTooth.send(堆积数据) : 往下执行
-                ---> wifi是否连接 ? 通过wifi上传(post->upload) : 往下执行
-        -1: Preparation mode  训练准备模式：用户连接脑电和是在道路初始位置判断
-        -2: Train mode  正式训练模式
-            --2.0: 物联网
-                -判断：(new-WIFI名称 == WIFI名称 || new-WIFI密码 == WIFI密码) ? 不重连 : 重连
-                -读取：脑电专注数据 -> 实时上传：(post -> updateDot)
-                -读取：Response -> 更新阈值数据、地图(训练模式)
-            -2.1: 屏幕初始化(初始化对象)
-            -2.2: 播放器初始化(初始化对象)
-            -2.3: 地图(训练模式) -> 模式判断与执行
-                --2.3.0: 娱乐模式
-                    --- 小车运动控制
-                        -读取手柄数据 -> 控制行进(左右)方向
-                        -读取脑电专注数据 -> 控制行进速度
-                    --- 屏幕刷新
-                        -计算：目前小车等级 -> 决定：等级对应的页面号
-                        -页面刷新(等级对应的页面初始化)
-                        -专注度实时刷新
-                    --- 声音反馈
-                        -专注力上升超过阈值(之前低于阈值) -> 播放音效文件
-                --2.3.1: 快速训练模式
-                    --- 小车运动控制
-                        -脑电专注数据 -> 控制行进速度
-                        -PID算法(读取灰度传感器模拟引脚) -> 控制行进方向
-                    --- 屏幕刷新
-                        -计算：目前小车等级 -> 决定：等级对应的页面号
-                        -页面刷新(等级对应的页面初始化)
-                        -专注度实时刷新
-                --2.3.2: 地图训练模式
-                    --- 小车运动控制
-                        -脑电专注数据 -> 控制行进速度
-                        -PID算法(读取灰度传感器模拟引脚) -> 控制行进方向
-                    --- 屏幕刷新
-                        -计算：目前训练时间 -> 决定：地图对应的小车形态页面号
-                              目前小车等级 -> 决定：等级对应的页面号
-                        -页面刷新(等级对应的页面 与 地图对应的小车形态 定时切换)
-                        -(等级对应的页面)等级显示、专注度实时刷新
-                    --- 声音反馈
-                        -专注力上升超过阈值(之前低于阈值) -> 播放音效文件
-                        -读取：目前训练时间 和 当前地图  -> 决定：播放训练阶段性音效
-"""
-# import utils.Bluetooth as bl
+# import utils.Bluetooth as BT
 from multiprocessing import Process, Queue
+from utils.WebRequest import *
 from ProcessPool import *
+import random
+import os
 import time
+import serial
+import wiringpi
+# from bluezero import adapter
 
-global Car_State
+OUTPUT = 1  # 定义OUTPUT为1即输出
+INPUT = 0  # 定义INPUT为0即输入
+HIGH = 1  # 定义HIGH为1即高点平
+LOW = 0  # 定义HIGH为1即高点平
+
+wiringpi.wiringPiSetup()  # 设置GPIO编号为wPi方式
+# ser_HC05 = serial.Serial('/dev/ttyUSB0',9600,timeout = 0.5)   #使用USB连接串行口
+
+global PinsInput
+global saveIndex, uploadIndex, level, wifiName, wifiPass, userID
+global Car_State, BlueToothConnected
 Car_State = 0
+BlueToothConnected = False
+PinsInput = [0]
+PinsOutput = [2]
+userID = "o1JHJ4mbPNY_gv0RvAWw-_zm_WqM"
+
+def ReadOneLine(file_name=""):
+    file = open(file=os.getcwd() + "/user/" + file_name)
+    val = file.readline()
+    file.close()
+    return val
+
+def upload():
+    # 通过wifi积压上传，未判断状态
+    global Car_State, BlueToothConnected, uploadIndex, saveIndex
+    if Car_State == 0 and uploadIndex < saveIndex:
+        for i in range(uploadIndex+1, saveIndex+1):
+            # 从uploadIndex+1到saveIndex
+            data = {"id": "", "graph": "", "mark": 0, "gold": "0", "time": 0}
+            uploading_path = os.getcwd() + "/user/" + str(i) + ".txt"
+            uploading_money_name_str = str(i) + "_money.txt"
+            uploading_time_name_str = str(i) + "_time.txt"
+            data["mark"] = i
+            data["id"] = "o1JHJ4mbPNY_gv0RvAWw-_zm_WqM"
+            data["gold"] = int(ReadOneLine(uploading_money_name_str))
+            data["time"] = int(ReadOneLine(uploading_time_name_str))
+            count_line = 0
+            for line in open(uploading_path):
+                if count_line != 0:
+                    data["graph"] += ","
+                data["graph"] += line[0:-1]
+                count_line += 1
+            res = post(data=data, url="/api/cart/upload")
+            if res.__contains__('error'):
+                print(res["error"])
+                time.sleep(1)
+            elif res["success"]:
+                uploadIndex = i
+                file = open(file=os.getcwd() + "/user/UploadIndex.txt", mode="w")
+                print(uploadIndex, end="", file=file)
+            else:
+                time.sleep(1)
+            print(res)
+            # time.sleep(3)
+            # print(data["graph"])
+
+def connectedTest(self):
+    global BlueToothConnected
+    print("testConnected")
+    BlueToothConnected = True
+
+
+def disconnectedTest(self):
+    global BlueToothConnected
+    print("testDisconnected")
+    BlueToothConnected = False
+
+
+def receiveTest(self, value):
+    print(value)
 
 def setup():
+    # adapter_address = list(adapter.Adapter.available())[0].address
+    # bluetooth = BT.BlueService(adapter_address)
+    # bluetooth.publish()
+    global saveIndex, uploadIndex, PinsInput
+    for pin in PinsInput:
+        wiringpi.pinMode(pin, INPUT)  # 设置GPIO_Intput_Pin为INPUT输入模式
+    for pin in PinsOutput:
+        wiringpi.pinMode(pin, OUTPUT)  # 设置GPIO_Intput_Pin为INPUT输入模式
+    wiringpi.digitalWrite(PinsOutput[0], LOW)
+    saveIndex = int(ReadOneLine("SaveIndex.txt"))
+    uploadIndex = int(ReadOneLine("UploadIndex.txt"))
+    level = int(ReadOneLine("level.txt"))
+    wifiName = ReadOneLine("WifiName.txt")
+    wifiPass = ReadOneLine("WifiPass.txt")
+    print("save =", saveIndex)
+    print("upload =", uploadIndex)
+    print("level =", level)
+    print("wifiname =", wifiName)
+
+
+def pd_WakeUp():
+    if wiringpi.digitalRead(PinsInput[0]) == HIGH:
+        wake_up_time = time.time()
+        while time.time() - wake_up_time <= 2:
+            if wiringpi.digitalRead(PinsInput[0]) == LOW:
+                return False
+        return True
+    return False
+
+def pid(attention=50):
+    """
+    【期望】读取模拟引脚返回灰度值，pid算法输出pwm波循迹
+    【实际】串口输出attention
+    :param attention:
+    :return:
+    """
     pass
 
-
 def Mainloop(AudioTasks=Queue(), ScreenTasks=Queue()):
+    global Car_State
+    attentions = []
+    setup()
+    last_state = 0
+    threshold = 45
+    now_wifi_time = time.time()
+    now_update_time = time.time()
+    attention_index = 0
     while True:
         # print("3(左).mp3")
         # AudioTasks.put("3(左).mp3")
@@ -84,12 +138,56 @@ def Mainloop(AudioTasks=Queue(), ScreenTasks=Queue()):
         # time.sleep(10)
         if Car_State == 0:
             # 休眠模式
-            pass
+            wiringpi.digitalWrite(PinsOutput[0], LOW)
+            upload()
+            if time.time() - now_wifi_time >= 2:
+                data = {"id": userID, "dot": -1}
+                res = post(data=data, url="/api/cart/updateDot")
+                print(res)
+                now_wifi_time = time.time()
+            pd = pd_WakeUp()
+            if pd:
+                Car_State = 1
+                time.sleep(1)
+
         elif Car_State == 1:
             # 训练准备模式
-            pass
+            wiringpi.digitalWrite(PinsOutput[0], LOW)
+            file_path = os.getcwd() + "/static/graph/points.txt"
+            attention_file = open(file_path)
+            attention_strs = attention_file.readline().split(',')
+            for str in attention_strs:
+                attentions.append(int(str))
 
+        elif Car_State == 2:
+            wiringpi.digitalWrite(PinsOutput[0], HIGH)
+            if time.time() - now_update_time > 1.:
+                now_attention = attentions[attention_index]
+                attention_index += 1
+                pid(now_attention)
+                scnOrder = {"name": "Jump", "args": {"page": "Page_state1.jpg"}}
+                ScreenTasks.put(scnOrder)
+                scnOrder = {"name": "set_attention", "args": {"val": now_attention}}
+                ScreenTasks.put(scnOrder)
+                if last_state == -1 and now_attention >= threshold:
+                    AudioTasks.put("frog_up.mp3")
+                    scnOrder = {"name": "Jump", "args": {"page": "level_up.jpg"}}
+                    ScreenTasks.put(scnOrder)
+                data = {"id": userID, "dot": now_attention}
+                res = post(data=data, url="/api/cart/updateDot")
+                if not res.__contains__('error'):
+                    threshold = res["content"]["threshold"]
+                if now_attention < threshold:
+                    last_state = -1
+                else:
+                    last_state = 1
+                now_update_time = time.time()
+            if pd_WakeUp():
+                Car_State = 1
 
 if __name__ == "__main__":
     PP = ProcessPool(mainloop=Mainloop)
     PP.startAll()
+    # setup()
+
+

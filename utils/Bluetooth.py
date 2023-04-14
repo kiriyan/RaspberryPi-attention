@@ -98,6 +98,7 @@ class BlueService:
         print('Text value:', bytes(value).decode('utf-8'))
 
 
+
 """
 下为使用示例
 """
