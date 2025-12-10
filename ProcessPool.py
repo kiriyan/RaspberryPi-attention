@@ -17,11 +17,22 @@ class ProcessPool:
         """
         ProcessPool.procAudio = Process(target=self.AudioProc, args=(ProcessPool.AudioTasks,))
         ProcessPool.procMain = Process(target=mainloop, args=(ProcessPool.AudioTasks, ProcessPool.ScreenTasks,))
-        ProcessPool.procScreen = Process(target=self.AudioProc, args=(ProcessPool.ScreenTasks,))
+        ProcessPool.procScreen = Process(target=self.ScreenProc, args=(ProcessPool.ScreenTasks,))
         self.Screen = Screen()
         # if ScreenFunc is not None:
         #     ProcessPool.procScreen = Process(target=ScreenFunc, args=(ProcessPool.ScreenTasks,))
         self.AudioNowTask = None
+
+    def stop_all(self):
+        """安全停止所有进程"""
+        if self.AudioNowTask:
+            self.AudioNowTask.terminate()
+            self.AudioNowTask.join()
+        
+        for proc in [self.procAudio, self.procScreen, self.procMain]:
+            if proc and proc.is_alive():
+                proc.terminate()
+                proc.join()
 
     def AudioProc(self, tasks=Queue()):
         """
@@ -30,18 +41,23 @@ class ProcessPool:
         :return:
         """
         while True:
-            if not tasks.empty():
-                file_name = tasks.get()
-                print("playing: ", file_name)
-                if self.AudioNowTask is not None:
-                    try:
-                        self.AudioNowTask.terminate()
-                    except:
-                        print("audioNowPlay close error")
-                    else:
-                        print("audioNowPlay closed")
-                self.AudioNowTask = ap.playMusic(file_name)
-                self.AudioNowTask.start()
+            try:
+                if not tasks.empty():
+                    # file_name = tasks.get()
+                    file_name = tasks.get(timeout=1)  # 增加超时
+                    print("playing: ", file_name)
+                    if self.AudioNowTask is not None:
+                        try:
+                            self.AudioNowTask.terminate()
+                        except:
+                            print("audioNowPlay close error")
+                        else:
+                            print("audioNowPlay closed")
+                    self.AudioNowTask = ap.playMusic(file_name)
+                    self.AudioNowTask.start()
+            except Exception as e:
+                print(f"音频处理错误: {e}")
+                continue
 
     def ScreenProc(self, tasks=Queue()):
         while True:
